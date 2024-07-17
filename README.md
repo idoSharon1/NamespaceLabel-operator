@@ -1,1 +1,0 @@
-# NamespaceLabel-operator
