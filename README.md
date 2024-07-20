@@ -1,8 +1,8 @@
 # namespacelabel-operator
-// TODO(user): Add simple overview of use/purpose
+the namespacelabel crd is installed on the cluster to allow regular users to add labels to their namespaces
 
-## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+the current image of this controller is located in the repo:
+    idosharon2018/public-images-exercise:namespacelabel-operator-v1.0.0
 
 ## Getting Started
 
