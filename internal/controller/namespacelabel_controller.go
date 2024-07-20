@@ -19,11 +19,17 @@ package controller
 import (
 	"context"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+
+	// v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	// "github.com/idoSharon1/NamespaceLabel-operator/api/v1alpha1"
+	"github.com/idoSharon1/NamespaceLabel-operator/api/v1alpha1"
 	corev1alpha1 "github.com/idoSharon1/NamespaceLabel-operator/api/v1alpha1"
 )
 
@@ -34,23 +40,45 @@ type NamespaceLabelReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespaces,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the NamespaceLabel object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.3/pkg/reconcile
 func (r *NamespaceLabelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var namespaceLabel v1alpha1.NamespaceLabel
+	if err := r.Get(ctx, req.NamespacedName, &namespaceLabel); err != nil {
+		logger.Error(err, "unable to load namespace-label")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
 
+	var wantedNamespace v1.Namespace
+	if err := r.Get(ctx, types.NamespacedName{Name: namespaceLabel.ObjectMeta.Namespace}, &wantedNamespace); err != nil {
+		logger.Error(err, "unable to load namespace")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if wantedNamespace.Labels == nil {
+		wantedNamespace.Labels = make(map[string]string)
+	}
+
+	for key, value := range namespaceLabel.Spec.Labels {
+		wantedNamespace.Labels[key] = value
+	}
+
+	if err := r.Update(ctx, &wantedNamespace); err != nil {
+		logger.Error(err, "unable to update namespace labels")
+		return ctrl.Result{}, err
+	}
+
+	namespaceLabel.Status.Applied = true
+	if err := r.Status().Update(ctx, &namespaceLabel); err != nil {
+		logger.Error(err, "unable to update status of namespacelabel")
+		return ctrl.Result{}, err
+	}
+
+	logger.Info("Successfully updated namespace-", wantedNamespace.Name, "label")
 	return ctrl.Result{}, nil
 }
 

@@ -5,5 +5,9 @@ metadata:
     app.kubernetes.io/name: namespacelabel-operator
     app.kubernetes.io/managed-by: kustomize
   name: namespacelabel-sample
+  namespace: default
 spec:
-  # TODO(user): Add fields here
+  labels: 
+    a: "1"
+    b: "2"
+    c: "3"
