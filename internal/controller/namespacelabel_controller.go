@@ -38,7 +38,7 @@ type NamespaceLabelReconciler struct {
 }
 
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespaces,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups="",resources=namespaces,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=core.core.namespacelabel.io,resources=namespacelabels/finalizers,verbs=update
 
