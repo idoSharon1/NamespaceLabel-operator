@@ -43,6 +43,9 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+                x-kubernetes-validations:
+                - message: Label keys cannot start with 'app.kubernetes.io'
+                  rule: self.all(key, !key.startsWith('app.kubernetes.io'))
             required:
             - labels
             type: object

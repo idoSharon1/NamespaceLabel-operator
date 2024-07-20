@@ -20,8 +20,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Cannot inject consts to kubebuilder annotation, this consts is for consistency only
+const (
+	forbiddenManagementPrefix = "app.kubernetes.io"
+)
+
 // NamespaceLabelSpec defines the desired state of NamespaceLabel
 type NamespaceLabelSpec struct {
+	// +kubebuilder:validation:XValidation:rule="self.all(key, !key.startsWith('app.kubernetes.io'))",message="Label keys cannot start with 'app.kubernetes.io'"
 	Labels map[string]string `json:"labels"`
 }
 
