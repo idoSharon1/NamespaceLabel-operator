@@ -20,22 +20,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// Cannot inject consts to kubebuilder annotation, this consts is for consistency only
+const (
+	forbiddenManagementPrefix = "app.kubernetes.io"
+)
 
 // NamespaceLabelSpec defines the desired state of NamespaceLabel
 type NamespaceLabelSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of NamespaceLabel. Edit namespacelabel_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// +kubebuilder:validation:XValidation:rule="self.all(key, !key.startsWith('app.kubernetes.io'))",message="Label keys cannot start with 'app.kubernetes.io'"
+	Labels map[string]string `json:"labels"`
 }
 
 // NamespaceLabelStatus defines the observed state of NamespaceLabel
 type NamespaceLabelStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// +optional
+	Applied bool `json:"applied"`
 }
 
 //+kubebuilder:object:root=true

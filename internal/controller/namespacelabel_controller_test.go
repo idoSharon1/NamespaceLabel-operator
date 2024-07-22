@@ -14,71 +14,78 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package controller_test
 
 import (
 	"context"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	corev1 "k8s.io/api/core/v1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	corev1alpha1 "github.com/idoSharon1/NamespaceLabel-operator/api/v1alpha1"
 )
 
+const (
+	NamespaceLabelName      = "test-namespacelabel"
+	NamespaceLabelNamespace = "default"
+)
+
 var _ = Describe("NamespaceLabel Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
 
+	Context("When creating namespacelabel object", func() {
 		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
-		}
-		namespacelabel := &corev1alpha1.NamespaceLabel{}
-
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind NamespaceLabel")
-			err := k8sClient.Get(ctx, typeNamespacedName, namespacelabel)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &corev1alpha1.NamespaceLabel{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
+		It("Should create new regular namespacelabel crd", func() {
+			namespacelabel := &corev1alpha1.NamespaceLabel{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NamespaceLabel",
+					APIVersion: "core.core.namespacelabel.io/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NamespaceLabelName,
+					Namespace: NamespaceLabelNamespace,
+				},
+				Spec: corev1alpha1.NamespaceLabelSpec{
+					Labels: map[string]string{
+						"a": "1",
+						"b": "2",
+						"c": "3",
 					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				},
 			}
+			Expect(k8sClient.Create(ctx, namespacelabel)).Should(Succeed())
+
+			namespaceLookupKey := types.NamespacedName{Name: "default"}
+			affectedNamespace := corev1.Namespace{}
+
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, namespaceLookupKey, &affectedNamespace)
+				return err == nil
+			}).Should(BeTrue())
+			Expect(affectedNamespace.ObjectMeta.GetLabels()).Should(Equal(map[string]string{"a": "1", "b": "2", "c": "3"}))
 		})
 
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &corev1alpha1.NamespaceLabel{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Cleanup the specific resource instance NamespaceLabel")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &NamespaceLabelReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+		It("Should not allow to create new namespacelabel crd with managment labels", func() {
+			namespacelabel := &corev1alpha1.NamespaceLabel{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "NamespaceLabel",
+					APIVersion: "core.core.namespacelabel.io/v1alpha1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NamespaceLabelName,
+					Namespace: NamespaceLabelNamespace,
+				},
+				Spec: corev1alpha1.NamespaceLabelSpec{
+					Labels: map[string]string{
+						"app.kubernetes.io/test": "1",
+					},
+				},
 			}
-
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+			err := (k8sClient.Create(ctx, namespacelabel))
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
