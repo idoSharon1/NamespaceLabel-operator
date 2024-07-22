@@ -106,12 +106,33 @@ func (r *NamespaceLabelReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Init key-value pair for the labels og the namespace in case the namespace doesn't already have labels
 	if wantedNamespace.Labels == nil {
 		wantedNamespace.Labels = make(map[string]string)
+	} else { // wanted namespace already have labels
+		logger.Info("Getting namespace current labels:")
+		combinedLabels := make(map[string]string)
+		// get all affecting namespacelabelsobjects
+		var relevantNameSpaceLabels v1alpha1.NamespaceLabelList
+		if err := r.List(ctx, &relevantNameSpaceLabels, client.InNamespace(req.Namespace)); err != nil {
+			logger.Error(err, "cannot load current namespace namespacelabels")
+			return ctrl.Result{}, client.IgnoreNotFound(err)
+		}
+
+		// keeping all current affecting labels
+		for _, currentNamespaceLabel := range relevantNameSpaceLabels.Items {
+			if currentNamespaceLabel.ObjectMeta.Name != req.Name {
+				for key, value := range currentNamespaceLabel.Spec.Labels {
+					logger.Info(fmt.Sprintf("label -> %s", key))
+					combinedLabels[key] = value
+				}
+			}
+		}
+
+		wantedNamespace.Labels = combinedLabels
 	}
 
 	// Inject all the labels in case the defined labels doesn't conflict with already existing labels on the namespace
 	for key, value := range namespaceLabel.Spec.Labels {
 		// Checking if the current label already exists on the wanted namespace + the current namespacelabel object is yet to take affect
-		if _, exists := wantedNamespace.Labels[key]; exists && !namespaceLabel.Status.Applied {
+		if _, exists := wantedNamespace.Labels[key]; exists {
 			return ctrl.Result{}, fmt.Errorf("label %s already registered to this namespace by another namespace label", key)
 		} else {
 			wantedNamespace.Labels[key] = value
